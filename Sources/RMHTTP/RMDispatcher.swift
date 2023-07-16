@@ -13,12 +13,12 @@ protocol RMDispatcherProtocol {
 
 public class RMDispatcher: RMDispatcherProtocol {
 
-    static var shared: RMDispatcher = {
+   public static var shared: RMDispatcher = {
         let instance = RMDispatcher()
         return instance
     }()
 
-    func execute<T: Decodable>(_ request: RMRequest, to type: T.Type, debug: Bool? = false, completion: @escaping (Result<T, Error>) -> Void) {
+    public func execute<T: Decodable>(_ request: RMRequest, to type: T.Type, debug: Bool? = false, completion: @escaping (Result<T, Error>) -> Void) {
         var config = NSMutableURLRequest()
         guard let host = request.host else { return }
         config.url = URL(string: "\(host)\(request.path)")
