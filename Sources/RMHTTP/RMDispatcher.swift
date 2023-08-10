@@ -31,13 +31,23 @@ public class RMDispatcher: RMDispatcherProtocol {
         case .POST:
             config.httpMethod = "POST"
             config.httpBody = try? JSONSerialization.data(withJSONObject: request.body as Any, options: .prettyPrinted)
+            query(query: request.params, config: &config)
         case .PUT:
             config.httpMethod = "PUT"
             config.httpBody = try? JSONSerialization.data(withJSONObject: request.body as Any, options: .prettyPrinted)
+            query(query: request.params, config: &config)
         case .DELETE:
             config.httpMethod = "DELETE"
             config.httpBody = try? JSONSerialization.data(withJSONObject: request.body as Any, options: .prettyPrinted)
+            query(query: request.params, config: &config)
         }
+
+        if debug {
+            print("<=============== REQUEST ===============>")
+            debugPrint(config.httpMethod)
+            debugPrint(config.url?.absoluteURL)
+        }
+
 
         let session = URLSession.shared
         session.dataTask(with: config as URLRequest, completionHandler: { data, response, error  in
@@ -84,7 +94,7 @@ private extension RMDispatcher {
         guard let queries = query else { return }
         var components = URLComponents()
         for (key, value) in queries {
-            components.queryItems?.append(URLQueryItem(name: key.description, value: value.description))
+            config.queryItems?.append(URLQueryItem(name: key.description, value: value.description))
         }
     }
 
@@ -96,6 +106,7 @@ private extension RMDispatcher {
                 }
 
         if debug {
+
             print("<=============== RESPONSE ===============>")
             guard let str = content.prettyPrintedJSONString else {
                 return
