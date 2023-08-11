@@ -21,33 +21,21 @@ public class RMDispatcher: RMDispatcherProtocol {
     public func execute<T: Decodable>(_ request: RMRequest, to type: T.Type, debug: Bool? = false, completion: @escaping (Result<T, Error>) -> Void) {
         var config = NSMutableURLRequest()
         guard let host = request.host else { return }
-        config.url = URL(string: "\(host)\(request.path)")
+        config.url = URL(string: "\(host)\(request.path)\(query(with: request.params, config: &config))")
         header(header: request.header, config: &config)
-
         switch request.method {
         case .GET:
             config.httpMethod = "GET"
-            query(query: request.params, config: &config)
         case .POST:
             config.httpMethod = "POST"
             config.httpBody = try? JSONSerialization.data(withJSONObject: request.body as Any, options: .prettyPrinted)
-            query(query: request.params, config: &config)
         case .PUT:
             config.httpMethod = "PUT"
             config.httpBody = try? JSONSerialization.data(withJSONObject: request.body as Any, options: .prettyPrinted)
-            query(query: request.params, config: &config)
         case .DELETE:
             config.httpMethod = "DELETE"
             config.httpBody = try? JSONSerialization.data(withJSONObject: request.body as Any, options: .prettyPrinted)
-            query(query: request.params, config: &config)
         }
-
-        if debug {
-            print("<=============== REQUEST ===============>")
-            debugPrint(config.httpMethod)
-            debugPrint(config.url?.absoluteURL)
-        }
-
 
         let session = URLSession.shared
         session.dataTask(with: config as URLRequest, completionHandler: { data, response, error  in
@@ -70,7 +58,7 @@ public class RMDispatcher: RMDispatcherProtocol {
             DispatchQueue.main.async {
                 do {
                     guard let data = data else { return }
-                    self.show(debug: debug, content: data)
+                    self.show(debug: debug, request: request, content: data)
                     let content = try JSONDecoder().decode(T.self, from: data)
                     completion(.success(content))
                 } catch {
@@ -90,22 +78,30 @@ private extension RMDispatcher {
         }
     }
 
-    private func query(query: [String: AnyHashable]?, config: inout NSMutableURLRequest) {
-        guard let queries = query else { return }
-        var components = URLComponents()
-        for (key, value) in queries {
-            config.queryItems?.append(URLQueryItem(name: key.description, value: value.description))
+    private func query(with query: [String: AnyHashable]?, config: inout NSMutableURLRequest) -> String  {
+        guard let queries = query else { return  String() }
+        var query = String()
+        for (index, (key, value)) in queries.enumerated() {
+            if index == 0 {
+                query = "?\(key)=\(value)"
+            } else {
+                query = "\(query)&\(key)=\(value)"
+            }
         }
+        return query
     }
 
-    private func show(debug: Bool?, content: Data?) {
+    private func show(debug: Bool?, request: NSMutableURLRequest, content: Data?) {
         guard let debug = debug,
               let content = content
                 else {
                     return
                 }
-
         if debug {
+
+            print("<=============== REQUEST ===============>")
+            print(request.httpMethod)
+            print(request.url)
 
             print("<=============== RESPONSE ===============>")
             guard let str = content.prettyPrintedJSONString else {
